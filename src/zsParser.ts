@@ -95,14 +95,15 @@ export class zsParser {
 		let CommentLength = 0;
 		for (let i = 0; i < words.length; i++) {
 			const word = words[i];
-			if(word == undefined) continue;
+			if(word == undefined || word == '') continue;
 
 			if(zsParser.IsInComment) {
 				if(word == zsParser.MultiLineClosingCommentString) {
+					CommentLength+=word.length;
 					r.push({
 						line: lineCount,
 						startCharacter: charIndex,
-						length: word.length,
+						length: CommentLength,
 						tokenType: zsTypes.TokenTypeComment,
 						tokenModifiers: []
 					});
@@ -115,7 +116,7 @@ export class zsParser {
 
 			if(word == zsParser.OneLineCommentString) {
 				r.push({
-					line: lineCount, startCharacter: charIndex-1, length: line.length-charIndex+1,
+					line: lineCount, startCharacter: charIndex, length: line.length-charIndex+1,
 					tokenType: zsTypes.TokenTypeComment, tokenModifiers: []
 				});
 				break;
@@ -123,6 +124,7 @@ export class zsParser {
 			else if(word == zsParser.MultiLineOpeningCommentString) {
 				zsParser.IsInComment = true;
 				CommentLength+=word.length+1;
+				continue;
 			}
 
 			if(word[0] == zsTypes.PreprocessorChar) {
@@ -133,6 +135,7 @@ export class zsParser {
 			charIndex+=word.length+1;
 		}
 		if(zsParser.IsInComment) {
+			//CommentLength -= 2;
 			r.push({
 				line: lineCount, startCharacter: CommentLength-line.length, length: CommentLength,
 				tokenType: zsTypes.TokenTypeComment, tokenModifiers: []

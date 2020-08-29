@@ -5,6 +5,11 @@ import crafttweaker.oredict.IOreDictEntry;
 /* Incroyabilisim */
 import crafttweaker.item.IItemStack;
 
+/* 
+	c'est formidable
+	mon jeune
+	apprenti
+*/
 static copper   as IOreDictEntry = <ore:ingotCopper>;
 static plank    as IOreDictEntry = <ore:plankWood>;
 static redstone as IOreDictEntry = <ore:redstone>;
