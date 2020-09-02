@@ -1,7 +1,7 @@
 import {IParsedToken} from './IParsedToken'; 
 import * as zsRegistry from './zsRegistry';
 import * as zsTypes from './zsTypes';
-import Stack from "ts-data.stack";
+import { Stack } from './utils';
 import { Directive } from './zsPreprocessor';
 import { NativeTypeIdentifier, TokenTypeFromTypeIdentifier } from './zsNative';
 
@@ -13,13 +13,16 @@ export class zsParser {
 	public static MultiLineClosingCommentString = "*/";
 
 	public constructor() {
-		if(zsParser.Registry == null)
+		if(zsParser.Registry == null) {
 			zsParser.Registry = new zsRegistry.zsRegistry();
-		this.Context = new Stack<zsTypes.zsScope>();
-		this.Context.push(new zsTypes.zsGlobalScope());
+			zsParser.Context = new Stack<zsTypes.zsContextable>();
+			zsParser.Context.push(new zsTypes.zsGlobalScope());
+		}
+
 		zsParser.IsInComment = false;
 		this.Line = "";
 		this.LineCount = 0;
+		this.CharIndex = 0;
 		this.Words = [];
 	}
 
@@ -89,10 +92,10 @@ export class zsParser {
 		this.Line = line;
 		this.LineCount = lineCount;
 		let r: IParsedToken[] = [];
-		const words = line.split(/\s|(\/\/)|(\/\*)|(\*\/)/);
+		const words = line.split(/\s|(\/\/)|(\/\*)|(\*\/)|(\{)|(\})/);
 		this.Words = words;
-		let charIndex = 0;
 		let CommentLength = 0;
+		this.CharIndex = 0;
 		for (let i = 0; i < words.length; i++) {
 			const word = words[i];
 			if(word == undefined || word == '') continue;
@@ -102,7 +105,7 @@ export class zsParser {
 					CommentLength+=word.length;
 					r.push({
 						line: lineCount,
-						startCharacter: charIndex,
+						startCharacter: this.CharIndex,
 						length: CommentLength,
 						tokenType: zsTypes.TokenTypeComment,
 						tokenModifiers: []
@@ -116,7 +119,7 @@ export class zsParser {
 
 			if(word == zsParser.OneLineCommentString) {
 				r.push({
-					line: lineCount, startCharacter: charIndex, length: line.length-charIndex+1,
+					line: lineCount, startCharacter: this.CharIndex, length: line.length-this.CharIndex+1,
 					tokenType: zsTypes.TokenTypeComment, tokenModifiers: []
 				});
 				break;
@@ -132,10 +135,29 @@ export class zsParser {
 				break;
 			}
 
-			charIndex+=word.length+1;
+			for(let i=0; i<zsParser.Context.count(); i++) {
+				let ret;
+				try {
+					ret = zsParser.Context.peek(i)?.parseCallback(word, this);
+				} catch(e) {
+					continue;
+				}
+				if(ret == undefined) continue;
+				r = r.concat(ret.Tokens);
+				if(!ret.AllowNext) break;
+			}
+
+			const keyword = zsRegistry.zsGlobalRegistry.getKeyword(word);
+			if(keyword != undefined) {
+				keyword.call(this);
+				r.push({line: lineCount, startCharacter: this.CharIndex, length: word.length, tokenModifiers: [],
+					tokenType: zsTypes.TokenTypeKeyword});
+			}
+
+			this.CharIndex+=word.length+1;
 		}
+
 		if(zsParser.IsInComment) {
-			//CommentLength -= 2;
 			r.push({
 				line: lineCount, startCharacter: CommentLength-line.length, length: CommentLength,
 				tokenType: zsTypes.TokenTypeComment, tokenModifiers: []
@@ -144,10 +166,23 @@ export class zsParser {
 
 		return r;
 	}
-	public static IsInComment: boolean;
-	public Context: Stack<zsTypes.zsScope>;
 
-	private LineCount: number;
+	public registerContextCallback(context: zsTypes.zsContextable) {
+		zsParser.Context.push(context);
+	}
+
+	public unregisterLastContextCallback() {
+		zsParser.Context.pop();
+	}
+
+	public static IsInComment: boolean;
+	public static Context: Stack<zsTypes.zsContextable>;
+	//private static Callbacks: Stack<zsTypes.zsContextable>; 
+
+	public LineCount: number;
+	public CharIndex: number;
 	private Line: string;
 	private Words: string[];
+	
+	public static NULL: zsParser = new zsParser();
 }

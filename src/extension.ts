@@ -9,7 +9,8 @@ const tokenModifiers = new Map<string, number>();
 const legend = (function () {
 	const tokenTypesLegend = [
 		'keyword', 'import', 'comment', 'string', 'number', 'operator', 'class',
-		'function', 'typeParameter', 'member', 'variable', 'parameter', 'gameObject'
+		'function', 'typeParameter', 'member', 'variable', 'parameter', 'gameObject',
+		'error'
 		/*
 		'comment', 'string', 'keyword', 'number', 'regexp', 'operator', 'namespace',
 		'type', 'struct', 'class', 'interface', 'enum', 'typeParameter', 'function',
@@ -64,6 +65,8 @@ class DocumentSemanticTokensProvider implements vscode.DocumentSemanticTokensPro
 	}
 
 	private _parseText(text: string): IParsedToken[] {
+
+
 		let r: IParsedToken[] = [];
 		const lines = text.split(/\r\n|\r|\n/);
 		const parser: zsParser = new zsParser();
@@ -77,26 +80,6 @@ class DocumentSemanticTokensProvider implements vscode.DocumentSemanticTokensPro
 			catch(e) {
 				//TODO
 			}
-
-			/*do {
-				const openOffset = line.indexOf('[', currentOffset);
-				if (openOffset === -1) {
-					break;
-				}
-				const closeOffset = line.indexOf(']', openOffset);
-				if (closeOffset === -1) {
-					break;
-				}
-				const tokenData = this._parseTextToken(line.substring(openOffset + 1, closeOffset));
-				r.push({
-					line: i,
-					startCharacter: openOffset + 1,
-					length: closeOffset - openOffset - 1,
-					tokenType: tokenData.tokenType,
-					tokenModifiers: tokenData.tokenModifiers
-				});
-				currentOffset = closeOffset;
-			} while (true);*/
 		}
 		return r;
 	}
@@ -108,4 +91,6 @@ class DocumentSemanticTokensProvider implements vscode.DocumentSemanticTokensPro
 			tokenModifiers: parts.slice(1)
 		};
 	}
+
+	
 }
